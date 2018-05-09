@@ -17,34 +17,34 @@ function createTheOCModelFile(json_obj, className, superName) {
 	for(var i = 0; i < createOCH.mClassBody.length; i++) {
 		createOCH.mBody.push(createOCH.mClassBody[i])
 	}
-	
+
 	var classNamesStr = createOCH.createClassNames();
 	createOCH.hBody.splice(1, 0, classNamesStr);
 }
 
-createOCH.createClassNames = function(){
-	if(this.attributeCount(this.classArr) > 0){
+createOCH.createClassNames = function() {
+	if(this.attributeCount(this.classArr) > 0) {
 		var classNamesStr = "@class ";
 		classNamesStr += this.classArr[0];
-		for (var i = 1; i < this.classArr.length; i++) {
-				classNamesStr += ", " + this.classArr[i];
+		for(var i = 1; i < this.classArr.length; i++) {
+			classNamesStr += ", " + this.classArr[i];
 		}
 		classNamesStr += ";" + this.newline();
 		return classNamesStr;
-	}else{
+	} else {
 		return "";
 	}
 }
 
 createOCH.attributeCount = function(obj) {
-        var count = 0;
-        for(var i in obj) {
-            if(obj.hasOwnProperty(i)) {  // 建议加上判断,如果没有扩展对象属性可以不加
-                count++;
-            }
-        }
-        return count;
-    }
+	var count = 0;
+	for(var i in obj) {
+		if(obj.hasOwnProperty(i)) { // 建议加上判断,如果没有扩展对象属性可以不加
+			count++;
+		}
+	}
+	return count;
+}
 
 createOCH.createHeaderFile = function() {
 	this.hBody.push(this.importFile(this.superName + ".h"));
@@ -78,16 +78,39 @@ createOCH.buildTheAttributeWithValue = function(value, key) {
 		}
 	} else if(typeof(value) == "object") {
 		if(value instanceof Array) {
-			return '@property (nonatomic, strong) NSArray * ' + key + ';\n' + this.newline()
+			var keyModel = "";
+			for(var i = 0; i < key.length; i++) {
+				if(i == 0) {
+					keyModel += key[i].toUpperCase();
+				} else {
+					keyModel += key[i];
+				}
+			}
+			keyModel += "Model";
+			this.classArr.push(keyModel)
+			var body = "";
+			var mbody = "";
+			body += (this.createInterface(keyModel, "CHQModel"));
+			createHeaderFileBody(value[0], function(self, attribute) {
+				body += (attribute);
+			})
+
+			body += (this.createEnd());
+			mbody += this.createImplementation(keyModel);
+			mbody += this.createEnd();
+
+			this.mClassBody.push(mbody);
+			this.hClassBody.push(body);
+			return '@property (nonatomic, strong) NSMutableArray <'+ keyModel +'*>* ' + key + ';\n' + this.newline()
 		} else if(value instanceof Object) {
 			if(this.attributeCount(value) == 0) {
 				return '@property (nonatomic, strong) NSDictionary * ' + key + ';\n' + this.newline()
 			} else {
 				var keyModel = "";
-				for (var i = 0; i < key.length; i++) {
-					if (i == 0) {
-							keyModel +=	key[i].toUpperCase();
-					}else{
+				for(var i = 0; i < key.length; i++) {
+					if(i == 0) {
+						keyModel += key[i].toUpperCase();
+					} else {
 						keyModel += key[i];
 					}
 				}
@@ -99,17 +122,17 @@ createOCH.buildTheAttributeWithValue = function(value, key) {
 				createHeaderFileBody(value, function(self, attribute) {
 					body += (attribute);
 				})
+
 				body += (this.createEnd());
-				
 				mbody += this.createImplementation(keyModel);
 				mbody += this.createEnd();
-				
+
 				this.mClassBody.push(mbody);
 				this.hClassBody.push(body);
 				return '@property (nonatomic, strong) ' + keyModel + ' * ' + key + ';\n' + this.newline()
 			}
 		}
-	}else if(typeof(value) == "boolean"){
+	} else if(typeof(value) == "boolean") {
 		return '@property (nonatomic, assign) BOOL ' + key + ';\n' + this.newline()
 	}
 	return "";
