@@ -38,7 +38,8 @@
 
 	<body>
 		<div id="main">
-			<input id="superClassName" placeholder="继承的父类" value="ResponseObject" />
+			<input id="superClassName" placeholder="继承的父类(填空为NSObject)" value="ResponseObject" />
+			<input id="cSuperClassName" placeholder="所有子类继承的父类(填空为NSObject)" value="CHQModel" />
 			<input id="className" placeholder="Model 类名" />
 			<br/> json 字符串:
 			<p><textarea id="i" name="" rows="22" cols="44"></textarea><br><span id="err"></span></p>
@@ -58,35 +59,36 @@
 				var oJ = null;
 				var hBody = "";
 				var mBody = "";
-				//				try {
-				oJ = JSON.parse(sT);
+				try {
+					oJ = JSON.parse(sT);
 
-				var sJ = JSON.stringify(oJ, 0, 4);
+					var sJ = JSON.stringify(oJ, 0, 4);
 
-				openJSON(sJ);
+					openJSON(sJ);
 
-				var className = document.getElementById("className").value
-				var superClass = document.getElementById("superClassName").value
+					var className = document.getElementById("className").value
+					var superClass = document.getElementById("superClassName").value
+					var sSuperClass = document.getElementById("cSuperClassName").value
 
-				createTheOCModelFile(oJ, className, superClass);
+					createTheOCModelFile(oJ, className, superClass, sSuperClass);
 
-				if(className == "") {
-					alert("请输入Model类名");
-					return;
+					if(className == "") {
+						alert("请输入Model类名");
+						return;
+					}
+					var hfile = new File(createOCH.hBody, className + ".h", {
+						type: "text/plain;charset=utf-8"
+					});
+					saveAs(hfile);
+
+					var mfile = new File(createOCH.mBody, className + ".m", {
+						type: "text/plain;charset=utf-8"
+					});
+					saveAs(mfile);
+
+				} catch(e) {
+					document.getElementById('err').innerHTML = e;
 				}
-				var hfile = new File(createOCH.hBody, className + ".h", {
-					type: "text/plain;charset=utf-8"
-				});
-				saveAs(hfile);
-
-				var mfile = new File(createOCH.mBody, className + ".m", {
-					type: "text/plain;charset=utf-8"
-				});
-				saveAs(mfile);
-
-				//				} catch(e) {
-				//					document.getElementById('err').innerHTML = e;
-				//				}
 			});
 
 			function openJSON(sJ) {

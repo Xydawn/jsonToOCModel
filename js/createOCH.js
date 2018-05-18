@@ -1,6 +1,12 @@
 var createOCH = new Object();
 
-function createTheOCModelFile(json_obj, className, superName) {
+function createTheOCModelFile(json_obj, className, superName, sSuperName) {
+	if(superName == "") {
+		superName = "NSObject"
+	}
+	if(sSuperName == "") {
+		sSuperName = "NSObject"
+	}
 	createOCH.classArr = [];
 	createOCH.hBody = [];
 	createOCH.mBody = [];
@@ -9,6 +15,7 @@ function createTheOCModelFile(json_obj, className, superName) {
 	createOCH.json_obj = json_obj;
 	createOCH.className = className;
 	createOCH.superName = superName;
+	createOCH.sSuperName = sSuperName;
 	createOCH.createHeaderFile();
 	createOCH.createOCMFile();
 	for(var i = 0; i < createOCH.hClassBody.length; i++) {
@@ -55,9 +62,9 @@ createOCH.createHeaderFile = function() {
 	this.hBody.push(this.createEnd());
 }
 
-function createHeaderFileBody(json_obj, callBack) {
+function createHeaderFileBody(json_obj, callBack, classBody) {
 	for(var key in json_obj) {
-		callBack(createOCH, createOCH.buildTheAttributeWithValue(json_obj[key], key));
+		callBack(createOCH, createOCH.buildTheAttributeWithValue(json_obj[key], key, classBody));
 	}
 }
 
@@ -67,7 +74,7 @@ createOCH.createOCMFile = function() {
 	this.mBody.push(this.createEnd());
 }
 
-createOCH.buildTheAttributeWithValue = function(value, key) {
+createOCH.buildTheAttributeWithValue = function(value, key, classBody) {
 	if(typeof(value) == "string") {
 		return '@property (nonatomic, copy) NSString * ' + key + ';\n' + this.newline()
 	} else if(typeof(value) == "number") {
@@ -77,59 +84,65 @@ createOCH.buildTheAttributeWithValue = function(value, key) {
 			return '@property (nonatomic, assign) NSInteger ' + key + ';\n' + this.newline()
 		}
 	} else if(typeof(value) == "object") {
+		var classObject = new Object();
+		classObject.keyModel = "";
+		classObject.body = "";
+		classObject.mbody = "";
+
 		if(value instanceof Array) {
-			var keyModel = "";
+
 			for(var i = 0; i < key.length; i++) {
 				if(i == 0) {
-					keyModel += key[i].toUpperCase();
+					classObject.keyModel += key[i].toUpperCase();
 				} else {
-					keyModel += key[i];
+					classObject.keyModel += key[i];
 				}
 			}
-			keyModel += "Model";
-			this.classArr.push(keyModel)
-			var body = "";
-			var mbody = "";
-			body += (this.createInterface(keyModel, "CHQModel"));
+			classObject.keyModel += "Model";
+			this.classArr.push(classObject.keyModel)
+
+			classObject.mbody += this.createImplementation(classObject.keyModel);
+			classObject.body += (this.createInterface(classObject.keyModel, this.sSuperName));
+			if(classBody) {
+				classBody.mbody += this.classArraySetter(value, key, classObject.keyModel)
+			}
 			createHeaderFileBody(value[0], function(self, attribute) {
-				body += (attribute);
-			})
+				classObject.body += (attribute);
+			}, classObject)
 
-			body += (this.createEnd());
-			mbody += this.createImplementation(keyModel);
-			mbody += this.createEnd();
+			classObject.body += (this.createEnd());
+			classObject.mbody += this.createEnd();
 
-			this.mClassBody.push(mbody);
-			this.hClassBody.push(body);
-			return '@property (nonatomic, strong) NSMutableArray <'+ keyModel +'*>* ' + key + ';\n' + this.newline()
+			this.mClassBody.push(classObject.mbody);
+			this.hClassBody.push(classObject.body);
+			return '@property (nonatomic, strong) NSMutableArray <' + classObject.keyModel + '*>* ' + key + ';\n' + this.newline()
 		} else if(value instanceof Object) {
 			if(this.attributeCount(value) == 0) {
 				return '@property (nonatomic, strong) NSDictionary * ' + key + ';\n' + this.newline()
 			} else {
-				var keyModel = "";
 				for(var i = 0; i < key.length; i++) {
 					if(i == 0) {
-						keyModel += key[i].toUpperCase();
+						classObject.keyModel += key[i].toUpperCase();
 					} else {
-						keyModel += key[i];
+						classObject.keyModel += key[i];
 					}
 				}
-				keyModel += "Model";
-				this.classArr.push(keyModel)
-				var body = "";
-				var mbody = "";
-				body += (this.createInterface(keyModel, "CHQModel"));
+				classObject.keyModel += "Model";
+				this.classArr.push(classObject.keyModel)
+				classObject.body += (this.createInterface(classObject.keyModel, this.sSuperName));
+				classObject.mbody += this.createImplementation(classObject.keyModel);
+				if(classBody) {
+					classBody.mbody += this.classObjectSetter(value, key, classObject.keyModel)
+				}
 				createHeaderFileBody(value, function(self, attribute) {
-					body += (attribute);
-				})
+					classObject.body += (attribute);
+				}, classObject)
+				classObject.body += (this.createEnd());
+				classObject.mbody += this.createEnd();
 
-				body += (this.createEnd());
-				mbody += this.createImplementation(keyModel);
-				mbody += this.createEnd();
-
-				this.mClassBody.push(mbody);
-				this.hClassBody.push(body);
-				return '@property (nonatomic, strong) ' + keyModel + ' * ' + key + ';\n' + this.newline()
+				this.mClassBody.push(classObject.mbody);
+				this.hClassBody.push(classObject.body);
+				return '@property (nonatomic, strong) ' + classObject.keyModel + ' * ' + key + ';\n' + this.newline()
 			}
 		}
 	} else if(typeof(value) == "boolean") {
@@ -141,9 +154,58 @@ createOCH.buildTheAttributeWithValue = function(value, key) {
 createOCH.newline = function() {
 	return '\n';
 }
+/*
+ -(void)setRole:(NSMutableArray *)role{
+    _role = [[NSMutableArray alloc]init];
+    for (NSDictionary * dict in role) {
+        RoleModel * model = [[RoleModel alloc]init];
+        [model setValuesForKeysWithDictionary:dict];
+        [_role addObject:model];
+    }
+}
+
+-(void)setDispatch:(NSDictionary *)dispatch
+ * */
+createOCH.classObjectSetter = function(value, key, keyModel) {
+	var selKey = ''
+	for(var i = 0; i < key.length; i++) {
+		if(i == 0) {
+			selKey += key[i].toUpperCase();
+		} else {
+			selKey += key[i];
+		}
+	}
+	var setter = '-(void)set' + selKey + ':(NSDictionary *) ' + key + this.newline() +
+		'{' + this.newline() +
+		'\t' + "_" + key + '= [[' + keyModel + ' alloc]init];' + this.newline() +
+		'\t' + '[_' + key + ' setValuesForKeysWithDictionary:' + key + '];' + this.newline() +
+		'}' + this.newline()
+	return setter;
+}
+
+createOCH.classArraySetter = function(value, key, keyModel) {
+	var selKey = ''
+	for(var i = 0; i < key.length; i++) {
+		if(i == 0) {
+			selKey += key[i].toUpperCase();
+		} else {
+			selKey += key[i];
+		}
+	}
+	var setter = '-(void)set' + selKey + ':(NSMutableArray *) ' + key + this.newline() +
+		'{' + this.newline() +
+		'\t' + "_" + key + '= [[NSMutableArray alloc]init];' + this.newline() +
+		'\t' + 'for (NSDictionary * dict in ' + key + ') {' + this.newline() +
+		'\t\t' + keyModel + ' * model = [[' + keyModel + ' alloc]init];' + this.newline() +
+		'\t\t' + '[model setValuesForKeysWithDictionary:dict];' + this.newline() +
+		'\t\t' + "[_" + key + ' addObject:model];' + this.newline() +
+		'\t}' + this.newline() +
+		'}' + this.newline()
+	return setter;
+}
 
 createOCH.importFile = function(fileName) {
-	if(fileName == null) {
+	if(fileName == "NSObject.h") {
 		return this.newline() + "#import <Foundation/Foundation.h>" + this.newline();
 	}
 	return this.newline() + "#import \"" + fileName + "\"" + "\n" + this.newline();
