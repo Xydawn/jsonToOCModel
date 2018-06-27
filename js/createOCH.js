@@ -16,8 +16,8 @@ function createTheOCModelFile(json_obj, className, superName, sSuperName) {
 	createOCH.className = className;
 	createOCH.superName = superName;
 	createOCH.sSuperName = sSuperName;
-	createOCH.createHeaderFile();
 	createOCH.createOCMFile();
+	createOCH.createHeaderFile();
 	for(var i = 0; i < createOCH.hClassBody.length; i++) {
 		createOCH.hBody.push(createOCH.hClassBody[i])
 	}
@@ -105,6 +105,8 @@ createOCH.buildTheAttributeWithValue = function(value, key, classBody) {
 			classObject.body += (this.createInterface(classObject.keyModel, this.sSuperName));
 			if(classBody) {
 				classBody.mbody += this.classArraySetter(value, key, classObject.keyModel)
+			}else{
+				this.mBody.splice(2, 0, this.classArraySetter(value, key, classObject.keyModel));
 			}
 			createHeaderFileBody(value[0], function(self, attribute) {
 				classObject.body += (attribute);
@@ -133,6 +135,8 @@ createOCH.buildTheAttributeWithValue = function(value, key, classBody) {
 				classObject.mbody += this.createImplementation(classObject.keyModel);
 				if(classBody) {
 					classBody.mbody += this.classObjectSetter(value, key, classObject.keyModel)
+				}else{
+					this.mBody.splice(2, 0, this.classArraySetter(value, key, classObject.keyModel));
 				}
 				createHeaderFileBody(value, function(self, attribute) {
 					classObject.body += (attribute);
